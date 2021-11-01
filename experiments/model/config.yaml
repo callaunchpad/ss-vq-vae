@@ -124,9 +124,9 @@ val_loader:
   num_workers: 8
 data:
   train:
-    path: ../data/comb/pairs_train
+    path: /datasets/duet/data/lmd/audio_train/pairs_train
   val:
-    path: ../data/comb/pairs_val
+    path: /datasets/duet/data/lmd/audio_train/pairs_val
 
 epochs: 32
 log_period: 20
