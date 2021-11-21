@@ -1,23 +1,23 @@
 model:
   content_encoder:
     - { class: !!python/name:torch.nn.Conv1d ,
-        in_channels: &in_channels 1025, out_channels: 1024,
+        in_channels: &in_channels 1025, out_channels: 2048,
         kernel_size: 4, stride: 2, padding: 2 }
 
-    - { class: !!python/name:torch.nn.BatchNorm1d , num_features: 1024 }
+    - { class: !!python/name:torch.nn.BatchNorm1d , num_features: 2048 }
     - &nonlinearity { class: !!python/name:torch.nn.LeakyReLU , negative_slope: 0.1 }
     - { class: !!python/name:torch.nn.Conv1d ,
-        in_channels: 1024, out_channels: 1024,
+        in_channels: 2048, out_channels: 2048,
         kernel_size: 4, stride: 2, padding: 2 }
 
     - class: !!python/name:ss_vq_vae.nn.ResidualWrapper
       modules:
-        - { class: !!python/name:torch.nn.BatchNorm1d , num_features: 1024 }
+        - { class: !!python/name:torch.nn.BatchNorm1d , num_features: 2048 }
         - *nonlinearity
         - { class: !!python/name:torch.nn.Conv1d ,
-          in_channels: 1024, out_channels: 1024,
+          in_channels: 2048, out_channels: 2048,
           kernel_size: 1, stride: 1 }
-    - { class: !!python/name:torch.nn.BatchNorm1d , num_features: 1024 }
+    - { class: !!python/name:torch.nn.BatchNorm1d , num_features: 2048 }
 
   style_encoder_1d:
     - { class: !!python/name:torch.nn.Conv1d ,
@@ -39,7 +39,7 @@ model:
 
   vq:
     num_embeddings: 2048
-    embedding_dim: 1024
+    embedding_dim: 2048
     init:
         mode: fan_out
 
