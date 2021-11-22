@@ -69,11 +69,11 @@ class Model(nn.Module):
 
         return decoded, losses
 
-    def encode_content(self, input):
+    def encode_content(self, input, encode_content=False):
         encoded = self.content_encoder(input)
         if self.vq is None:
             return encoded, encoded, {}
-        return self.vq(encoded)
+        return self.vq(encoded, encode_content)
 
     def encode_style(self, input, length):
         encoded = self.style_encoder_1d(input)
@@ -255,6 +255,27 @@ class Experiment:
                 sf.write(p_output_full, a_output, samplerate=self.sr)
                 print(p_output, file=f_triplets)
 
+    def encode_content(self, path, batch_size):
+        loader_fn = self._cfg['val_loader'].bind(
+            torch.utils.data.DataLoader,
+            dataset=AudioTupleDataset(
+                path=path, sr=self.sr, preprocess_fn=self.preprocess, lazy=False),
+            collate_fn=util.collate_padded_tuples)
+        loader = loader_fn(**(dict(batch_size=batch_size) if batch_size else {}))
+
+        self.model.load_state_dict(torch.load("/datasets/duet/ssvqvae_model_state.pt"))
+        with torch.no_grad():
+            self.model.train(False)
+            all_encodings = []
+            input_device = None
+            for ((input_c, _), ) in loader:
+                print(type(input_c))
+                encoded_c = self.model.encode_content(input_c.to(device=self.device), encode_content=True)
+                all_encodings.append(encoded_c.cpu().numpy())
+        
+        all_encodings = np.concatenate(all_encodings)
+        np.savetxt(os.path.join(self.logdir, 'encoded_content.txt'), all_encodings, fmt="%d")
+
     def _validate(self, loader, tb_writer=None, step=None,
                   write_losses=True, write_samples=False, write_model=False):
         outputs, losses = self.run(loader)
@@ -345,6 +366,10 @@ def main():
                             help='a prefix (e.g. a directory path followed by a slash) for the '
                                  'output audio files')
     run_parser.add_argument('--batch-size', type=int, metavar='SIZE')
+    encode_content_parser = actions.add_parser('encode_content', help='Encode the input to train content RNN')
+    encode_content_parser.set_defaults(action='encode content')
+    encode_content_parser.add_argument('path')
+    encode_content_parser.add_argument('--batch-size', type=int, metavar='SIZE')
     args = parser.parse_args()
 
     torch.manual_seed(0)
@@ -358,7 +383,8 @@ def main():
     elif args.action == 'run':
         exp.run_files(pairs_path=args.pairs_path, output_list_path=args.output_list_path,
                       output_prefix=args.output_prefix, batch_size=args.batch_size)
-
+    elif args.action == 'encode content':
+        exp.encode_content(path=args.path, batch_size=args.batch_size)
 
 if __name__ == '__main__':
     logging.basicConfig(

@@ -17,7 +17,7 @@ class VQEmbedding(nn.Module):
         self._cfg['init'].bind(nn.init.kaiming_uniform_)(self.embedding.weight)
         self._axis = axis
 
-    def forward(self, input):
+    def forward(self, input, encode_content=False):
         if self._axis != -1:
             input = input.transpose(self._axis, -1)
 
@@ -25,6 +25,8 @@ class VQEmbedding(nn.Module):
                      - 2 * torch.matmul(input, self.embedding.weight.T)
                      + torch.sum(self.embedding.weight ** 2, axis=-1))
         ids = torch.argmin(distances, axis=-1)
+        if encode_content:
+            return ids
         quantized = self.embedding(ids)
 
         losses = {
