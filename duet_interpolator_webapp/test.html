@@ -1,0 +1,173 @@
+<html>
+    <head>
+        <style>
+            .slidecontainer {
+      width: 100%; /* Width of the outside container */
+    }
+    
+    /* The slider itself */
+    .slider {
+      -webkit-appearance: none;  /* Override default CSS styles */
+      appearance: none;
+      width: 100%; /* Full-width */
+      height: 25px; /* Specified height */
+      background: #d3d3d3; /* Grey background */
+      outline: none; /* Remove outline */
+      opacity: 0.7; /* Set transparency (for mouse-over effects on hover) */
+      -webkit-transition: .2s; /* 0.2 seconds transition on hover */
+      transition: opacity .2s;
+    }
+    
+    /* Mouse-over effects */
+    .slider:hover {
+      opacity: 1; /* Fully shown on mouse-over */
+    }
+    
+    /* The slider handle (use -webkit- (Chrome, Opera, Safari, Edge) and -moz- (Firefox) to override default look) */ 
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none; /* Override default look */
+      appearance: none;
+      width: 25px; /* Set a specific slider handle width */
+      height: 25px; /* Slider handle height */
+      background: #04AA6D; /* Green background */
+      cursor: pointer; /* Cursor on hover */
+    }
+    
+    .slider::-moz-range-thumb {
+      width: 25px; /* Set a specific slider handle width */
+      height: 25px; /* Slider handle height */
+      background: #04AA6D; /* Green background */
+      cursor: pointer; /* Cursor on hover */
+    }
+        </style>
+    </head>
+<body>
+    <script>
+        class AudioMerger {
+            constructor(files) {
+                this.files = files;
+                this.audios = files.map(file => new Audio(file));
+    
+                var AudioContext = window.AudioContext || window.webkitAudioContext;
+                var ctx = new AudioContext();
+                this.merger = ctx.createChannelMerger(this.audios.length);
+                this.merger.connect(ctx.destination);
+    
+                this.gains = this.audios.map(audio => {
+                var gain = ctx.createGain();
+                var source = ctx.createMediaElementSource(audio);
+                source.connect(gain);
+                gain.connect(this.merger);
+                return gain;
+                });
+    
+                this.buffered = false;
+    
+                var load = files.length;
+                this.audios.forEach(audio => {
+                audio.addEventListener("canplaythrough", () => {
+                    load--;
+                    if (load === 0) {
+                    this.buffered = true;
+                    if (this.bufferCallback != null) this.bufferCallback();
+                    }
+                });
+                });
+            }
+    
+            onBuffered(callback) {
+                if (this.buffered) callback();
+                else this.bufferCallback = callback;
+            }
+    
+            play() {
+                this.audios.forEach(audio => audio.play());
+            }
+    
+            pause() {
+                this.audios.forEach(audio => audio.pause());
+            }
+    
+            getTime() {
+                return this.audios[0].currentTime;
+            }
+    
+            setTime(time) {
+                this.audios.forEach(audio => audio.currentTime = time);
+            }
+    
+            getDelay() {
+                var times = [];
+                for (var i = 0; i < this.audios.length; i++) {
+                times.push(this.audios[i].currentTime);
+                }
+    
+                var minTime = Math.min.apply(Math, times);
+                var maxTime = Math.max.apply(Math, times);
+                return maxTime - minTime;
+            }
+    
+            setVolume(volume, audioID) {
+                this.gains[audioID].gain.value = volume;
+            }
+        }
+    </script>
+    <button onClick="startPlayback()">Play</button>
+    <button onClick="pausePlayback()">Pause</button>
+    <div class="slidecontainer">
+        <input type="range" min="0" max="100" value="0" class="slider" id="fileId">
+        <p>Value: <span id="demo"></span></p>
+    </div>
+    <script>
+        var slider = document.getElementById("fileId");
+        var output = document.getElementById("demo");
+        output.innerHTML = slider.value / 10; // Display the default slider value
+        var aud_files = []
+        for (var i = 0; i <= 10; i++) {
+            aud_files.push("output/0.4." + String(i) + ".wav")
+        }
+        var audioMerger = new AudioMerger(aud_files);
+
+        function playIdx(id) {
+            for(var i = 0; i <= 10; i++) {
+                if (i == id) {
+                    audioMerger.setVolume(1, i);
+                } else {
+                    audioMerger.setVolume(0, i);
+                }
+            }
+        }
+        function playSlider(val) {
+            if (val == 100) {
+                playIdx(10)
+            } else {
+                firstFile = Math.round(val / 10)
+                volume = (val % 10) / 10
+                secondFile = Math.round(val / 10 + 1)
+                console.log(String(firstFile)+String(secondFile)+String(volume)+String(1-volume))
+                
+                for(var i = 0; i <= 10; i++) {
+                    if (i == firstFile || i == secondFile) continue
+                    audioMerger.setVolume(0, i);
+                }
+                audioMerger.setVolume(1 - volume, firstFile);
+                audioMerger.setVolume(volume, secondFile);
+            }
+            
+        }
+        function startPlayback() {
+            playIdx(slider.value)
+            audioMerger.play()
+        }
+        function pausePlayback() {
+            audioMerger.pause()
+        }
+
+        slider.oninput = function() {
+            output.innerHTML = this.value / 10;
+            playSlider(this.value)
+            //playIdx(this.value)
+        }
+    </script>
+</body>
+</html>
