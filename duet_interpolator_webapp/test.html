@@ -1,173 +1,174 @@
 <html>
     <head>
-        <style>
-            .slidecontainer {
-      width: 100%; /* Width of the outside container */
-    }
-    
-    /* The slider itself */
-    .slider {
-      -webkit-appearance: none;  /* Override default CSS styles */
-      appearance: none;
-      width: 100%; /* Full-width */
-      height: 25px; /* Specified height */
-      background: #d3d3d3; /* Grey background */
-      outline: none; /* Remove outline */
-      opacity: 0.7; /* Set transparency (for mouse-over effects on hover) */
-      -webkit-transition: .2s; /* 0.2 seconds transition on hover */
-      transition: opacity .2s;
-    }
-    
-    /* Mouse-over effects */
-    .slider:hover {
-      opacity: 1; /* Fully shown on mouse-over */
-    }
-    
-    /* The slider handle (use -webkit- (Chrome, Opera, Safari, Edge) and -moz- (Firefox) to override default look) */ 
-    .slider::-webkit-slider-thumb {
-      -webkit-appearance: none; /* Override default look */
-      appearance: none;
-      width: 25px; /* Set a specific slider handle width */
-      height: 25px; /* Slider handle height */
-      background: #04AA6D; /* Green background */
-      cursor: pointer; /* Cursor on hover */
-    }
-    
-    .slider::-moz-range-thumb {
-      width: 25px; /* Set a specific slider handle width */
-      height: 25px; /* Slider handle height */
-      background: #04AA6D; /* Green background */
-      cursor: pointer; /* Cursor on hover */
-    }
-        </style>
+        <link rel="stylesheet" href="styles.css">
+        <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" crossorigin="anonymous"/>
+        <title>Duet Interpolator Demo</title>
+        <script src="AudioMerger.js"></script>
     </head>
-<body>
-    <script>
-        class AudioMerger {
-            constructor(files) {
-                this.files = files;
-                this.audios = files.map(file => new Audio(file));
-    
-                var AudioContext = window.AudioContext || window.webkitAudioContext;
-                var ctx = new AudioContext();
-                this.merger = ctx.createChannelMerger(this.audios.length);
-                this.merger.connect(ctx.destination);
-    
-                this.gains = this.audios.map(audio => {
-                var gain = ctx.createGain();
-                var source = ctx.createMediaElementSource(audio);
-                source.connect(gain);
-                gain.connect(this.merger);
-                return gain;
-                });
-    
-                this.buffered = false;
-    
-                var load = files.length;
-                this.audios.forEach(audio => {
-                audio.addEventListener("canplaythrough", () => {
-                    load--;
-                    if (load === 0) {
-                    this.buffered = true;
-                    if (this.bufferCallback != null) this.bufferCallback();
-                    }
-                });
-                });
-            }
-    
-            onBuffered(callback) {
-                if (this.buffered) callback();
-                else this.bufferCallback = callback;
-            }
-    
-            play() {
-                this.audios.forEach(audio => audio.play());
-            }
-    
-            pause() {
-                this.audios.forEach(audio => audio.pause());
-            }
-    
-            getTime() {
-                return this.audios[0].currentTime;
-            }
-    
-            setTime(time) {
-                this.audios.forEach(audio => audio.currentTime = time);
-            }
-    
-            getDelay() {
-                var times = [];
-                for (var i = 0; i < this.audios.length; i++) {
-                times.push(this.audios[i].currentTime);
-                }
-    
-                var minTime = Math.min.apply(Math, times);
-                var maxTime = Math.max.apply(Math, times);
-                return maxTime - minTime;
-            }
-    
-            setVolume(volume, audioID) {
-                this.gains[audioID].gain.value = volume;
-            }
-        }
-    </script>
-    <button onClick="startPlayback()">Play</button>
-    <button onClick="pausePlayback()">Pause</button>
-    <div class="slidecontainer">
-        <input type="range" min="0" max="100" value="0" class="slider" id="fileId">
-        <p>Value: <span id="demo"></span></p>
-    </div>
-    <script>
-        var slider = document.getElementById("fileId");
-        var output = document.getElementById("demo");
-        output.innerHTML = slider.value / 10; // Display the default slider value
-        var aud_files = []
-        for (var i = 0; i <= 10; i++) {
-            aud_files.push("output/0.4." + String(i) + ".wav")
-        }
-        var audioMerger = new AudioMerger(aud_files);
+    <body>
+        <div class="jumbotron jumbotron-fluid">
+            <div class="container">
+                <h1 class="display-4">Duet Interpolator Demo</h1>
+                <p class="lead">This page demos the audio style transfer interpolator created by Launchpad Duet 2021.</p>
+                <a class="btn btn-secondary" href="https://adasp.telecom-paris.fr/rc/demos_companion-pages/cifka-ss-vq-vae/" target="_BLANK">Link to original paper</a>
+                <a class="btn btn-secondary" href="https://github.com/18praveenb/ss-vq-vae" target="_BLANK">Link to GitHub Repo</a>
+            </div>
+        </div>
 
-        function playIdx(id) {
-            for(var i = 0; i <= 10; i++) {
-                if (i == id) {
-                    audioMerger.setVolume(1, i);
-                } else {
-                    audioMerger.setVolume(0, i);
-                }
-            }
-        }
-        function playSlider(val) {
-            if (val == 100) {
-                playIdx(10)
-            } else {
-                firstFile = Math.round(val / 10)
-                volume = (val % 10) / 10
-                secondFile = Math.round(val / 10 + 1)
-                console.log(String(firstFile)+String(secondFile)+String(volume)+String(1-volume))
-                
-                for(var i = 0; i <= 10; i++) {
-                    if (i == firstFile || i == secondFile) continue
-                    audioMerger.setVolume(0, i);
-                }
-                audioMerger.setVolume(1 - volume, firstFile);
-                audioMerger.setVolume(volume, secondFile);
-            }
+        <div class="container">
+            <h3 class="mt-0">Example #1</h3>
+            <div class="row mb-2" id="controls" style="display:none">
+                <div class="row">
+                    <div class="col-2">
+                        <button class="btn btn-success p-2 btn-block" onclick="playButtonClicked(this)" id="btn1" linked-audio="file1"><i class="fas fa-play"></i> Content Audio</button>
+                    </div>
+                    <div class="col">
+                        <button class="btn btn-success p-2 btn-block" onClick="togglePlayback(this)" id="btn2"><i class="fas fa-play"></i> Interpolation</button>
+                    </div>
+                    <div class="col-2">
+                        <button class="btn btn-success p-2 btn-block" onclick="playButtonClicked(this)" id="btn3" linked-audio="file2"><i class="fas fa-play"></i> Style Audio</button>
+                    </div>
+                    
+                </div>
+                <audio id="file1" src="output/0.4.a.wav" onended="makeBtnGreen(document.getElementById('btn1'))"></audio>
+                <audio id="file2" src="output/0.4.b.wav" onended="makeBtnGreen(document.getElementById('btn3'))"></audio>
+            </div>
+
+            <div class="row">
+                <div class="col">0% Style</div>
+                <div class="col-xl-9" style="width:100%">
+                    <input type="range" min="0" max="100" value="0" class="slider" id="styleSlider">
+                    <p>Content Audio with <span id="styleSliderValue"></span>% the style of Style Audio applied.</p>
+                </div>
+                <div class="col">100% Style</div>
+            </div>
             
-        }
-        function startPlayback() {
-            playIdx(slider.value)
-            audioMerger.play()
-        }
-        function pausePlayback() {
-            audioMerger.pause()
-        }
+            <div class="media">
+                <div class="media-body">
+                    <h3 class="mt-0">Example #1</h3>
+                    <div class="row mb-2" id="controls" style="display:none">
+                        <button class="btn btn-success p-2" onclick="playButtonClicked(this)" linked-audio="file1">Content Audio</button>
+                        <button class="btn btn-success p-2" onClick="togglePlayback(this)">Interpolation</button>
+                        <button class="btn btn-success p-2" onclick="playButtonClicked(this)" linked-audio="file2">Style Audio</button>
+                        <audio id="file1" src="output/0.4.a.wav" ></audio>
+                        <audio id="file2" src="output/0.4.b.wav" ></audio>
+                    </div>
+        
+                    <div class="row">
+                        <div class="slidecontainer">
+                            <input type="range" min="0" max="100" value="0" class="slider" id="styleSlider">
+                            <p>Content Audio with <span id="styleSliderValue"></span>% the style of Style Audio applied.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-        slider.oninput = function() {
-            output.innerHTML = this.value / 10;
-            playSlider(this.value)
-            //playIdx(this.value)
-        }
-    </script>
-</body>
+            <footer class="pt-2 my-md-5 pt-md-2 border-top">
+                <p>Audio Merger is adopted from answer by Aloso <a href="https://stackoverflow.com/questions/10377237/how-to-start-multiple-audio-tags-simultaneously/53252521#53252521" target="_BLANK">here</a>.</p>
+            </footer>
+        </div>
+        <script>
+            var slider = document.getElementById("styleSlider");
+            var output = document.getElementById("styleSliderValue");
+            var controls = document.getElementById("controls");
+            output.innerHTML = slider.value; // Display the default slider value
+            var aud_files = []
+            for (var i = 0; i <= 10; i++) {
+                aud_files.push("output/0.4." + String(i) + ".wav")
+            }
+            var audioMerger = new AudioMerger(aud_files);
+            audioMerger.onBuffered(showPlaybackBtns);
+            
+            function playSlider(val) {
+                if (val == 100) {
+                    audioMerger.muteAll()
+                    audioMerger.setVolume(1, 10)
+                } else {
+                    firstFile = Math.floor(val / 10)
+                    volume = (val % 10) / 10
+                    secondFile = Math.floor(val / 10 + 1)
+                    
+                    for(var i = 0; i <= 10; i++) {
+                        if (i == firstFile || i == secondFile) continue
+                        audioMerger.setVolume(0, i);
+                    }
+                    audioMerger.setVolume(1 - volume, firstFile);
+                    audioMerger.setVolume(volume, secondFile);
+                }
+            }
+
+            function stopAllAudios() {
+                var sounds = document.getElementsByTagName('audio');
+                for(i=0; i<sounds.length; i++) {
+                    sounds[i].pause();
+                    sounds[i].currentTime = 0;
+                }
+                makeBtnGreen(document.getElementById("btn1"))
+                makeBtnGreen(document.getElementById("btn3"))
+            }
+
+            function startPlayback() {
+                stopAllAudios()
+                audioMerger.setTime(0)
+                playSlider(100-slider.value)
+                audioMerger.play()
+            }
+            function stopPlayback() {
+                audioMerger.pause()
+                makeBtnGreen(document.getElementById("btn2"))
+            }
+
+            function togglePlayback(btn) {
+                if (audioMerger.isPaused()) {
+                    startPlayback()
+                    makeBtnRed(btn)
+                } else {
+                    stopPlayback()
+                    makeBtnGreen(btn)
+                }
+            }
+
+            function showPlaybackBtns() {
+                controls.style.display = "block";
+            }
+            slider.oninput = function() {
+                output.innerHTML = this.value;
+                playSlider(100-this.value)
+            }
+
+            function playButtonClicked(btn) {
+                linkedAudioName = btn.getAttribute("linked-audio")
+                var audio = document.getElementById(linkedAudioName);
+                if (audio.paused) {
+                    stopAllAudios()
+                    stopPlayback()
+                    audio.play();
+                    makeBtnRed(btn)
+                } else {
+                    audio.pause();
+                    audio.currentTime = 0
+                    makeBtnGreen(btn)
+                }
+            }
+            function makeBtnRed(btn) {
+                btn.classList.add('btn-danger')
+                btn.classList.remove('btn-success')
+                btn.children[0].classList.add('fa-stop')
+                btn.children[0].classList.remove('fa-play')
+            }
+            function makeBtnGreen(btn) {
+                btn.classList.remove('btn-danger')
+                btn.classList.add('btn-success')
+                btn.children[0].classList.add('fa-play')
+                btn.children[0].classList.remove('fa-stop')
+            }
+        </script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+        <script>
+
+        </script>
+    </body>
 </html>
