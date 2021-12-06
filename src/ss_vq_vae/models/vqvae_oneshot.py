@@ -16,6 +16,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import soundfile as sf
 import torch
+import shutil
 import torch.utils.tensorboard
 from torch import nn
 
@@ -44,6 +45,21 @@ class Model(nn.Module):
             nn.Sequential(*self._cfg['decoder'][i].configure_list())
             for i in range(len(self._cfg['decoder']))
         ])
+    
+    def interpolate(self, input_a, input_b, length_a, length_b, counter, exp):
+        #length_a, length_b = length_a.cpu(), length_b.cpu()
+        encoded_a_content, _, _ = self.encode_content(input_a)
+        encoded_a_style, _ = self.encode_style(input_a, length_a)
+        encoded_b_style, _ = self.encode_style(input_b, length_b)
+
+        for i in range(0, 11):
+            interpolation = encoded_a_style * i*0.1 + encoded_b_style * (1 - i*0.1)
+            decoded = self.decode(encoded_a_content, interpolation, length=length_a, max_length=input_a.shape[2])
+            for batch_num, output in enumerate(decoded):
+                a_output = exp.postprocess(output.cpu().numpy())
+                p_output = f'./output/{counter}.{batch_num}.{i}.wav'
+                sf.write(p_output, a_output, samplerate=exp.sr)
+
 
     def forward(self, input_c, input_s, length_c, length_s, return_losses=False):
         encoded_c, _, losses_c = self.encode_content(input_c)
@@ -86,7 +102,7 @@ class Model(nn.Module):
         if self.style_encoder_rnn is not None:
             encoded = encoded.transpose(1, 2)
             encoded = nn.utils.rnn.pack_padded_sequence(
-                encoded, length.clamp(min=1),
+                encoded, length.clamp(min=1).cpu(),
                 batch_first=True, enforce_sorted=False)
             _, encoded = self.style_encoder_rnn(encoded)
             # Get rid of layer dimension
@@ -230,6 +246,31 @@ class Experiment:
                       for name in all_losses[0]}
         self._add_total_loss(all_losses)
         return all_outputs, all_losses
+    
+    def interpolate_files(self, pairs_path, model, batch_size=None):
+        loader_fn = self._cfg['val_loader'].bind(
+            torch.utils.data.DataLoader,
+            dataset=AudioTupleDataset(
+                path=pairs_path, sr=self.sr, preprocess_fn=self.preprocess, lazy=False),
+            collate_fn=util.collate_padded_tuples)
+        loader = loader_fn(**(dict(batch_size=batch_size) if batch_size else {}))
+
+        self.model.load_state_dict(torch.load(model))
+        os.makedirs('output', exist_ok=True)
+        with torch.no_grad():
+            self.model.train(False)
+            input_device = None
+            counter = 0
+            for (input_c, length_c), (input_s, length_s) in loader:
+                for batch_num in range(len(input_c)):
+                    sf.write(f'output/{counter}.{batch_num}.a.wav', self.postprocess(input_c[batch_num].cpu().numpy()), samplerate=self.sr)
+                    sf.write(f'output/{counter}.{batch_num}.b.wav', self.postprocess(input_s[batch_num].cpu().numpy()), samplerate=self.sr)
+                self.model.interpolate(
+                    input_c.to(self.device), input_s.to(self.device),
+                    length_c.to(self.device), length_s.to(self.device), counter, self)
+                counter += 1
+            
+
 
     def run_files(self, pairs_path, output_list_path, output_prefix, batch_size=None):
         loader_fn = self._cfg['val_loader'].bind(
@@ -366,10 +407,18 @@ def main():
                             help='a prefix (e.g. a directory path followed by a slash) for the '
                                  'output audio files')
     run_parser.add_argument('--batch-size', type=int, metavar='SIZE')
-    encode_content_parser = actions.add_parser('encode_content', help='Encode the input to train content RNN')
+        encode_content_parser = actions.add_parser('encode_content', help='Encode the input to train content RNN')
     encode_content_parser.set_defaults(action='encode content')
     encode_content_parser.add_argument('path')
     encode_content_parser.add_argument('--batch-size', type=int, metavar='SIZE')
+    interpolate_parser = actions.add_parser('interpolate', help='Interpolate two styles using the trained model')
+    interpolate_parser.set_defaults(action='interpolate')
+    interpolate_parser.add_argument('pairs_path', metavar='PAIRS_FILE',
+                            help='a file listing on each line a pair of audio files to use as '
+                                 'the content and style input, respectively; the paths need to '
+                                 'be relative to the directory containing %(metavar)s')
+    interpolate_parser.add_argument('--batch-size', type=int, metavar='SIZE')
+    interpolate_parser.add_argument('--model')
     args = parser.parse_args()
 
     torch.manual_seed(0)
@@ -385,6 +434,9 @@ def main():
                       output_prefix=args.output_prefix, batch_size=args.batch_size)
     elif args.action == 'encode content':
         exp.encode_content(path=args.path, batch_size=args.batch_size)
+    elif args.action == 'interpolate':
+        exp.interpolate_files(pairs_path=args.pairs_path, model_path=args.model, batch_size=args.batch_size)
+
 
 if __name__ == '__main__':
     logging.basicConfig(
