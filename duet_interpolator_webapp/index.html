@@ -68,7 +68,10 @@
                     var audioMerger = new AudioMerger(aud_files)
                     audioMergers.push(audioMerger)
                     audioMerger.onBuffered(() => showPlaybackBtns(index));
-                    audioMerger.onEnded(() => makeBtnGreen(document.getElementById('btn2-'+index)));
+                    audioMerger.onEnded(function() {
+                        audioMerger.currentTime = 0;
+                        makeBtnGreen(document.getElementById('btn2-'+index));
+                    });
                 })
 
                 $('input.slider').each(function(index) {
