@@ -4,16 +4,16 @@ class AudioMerger {
         this.audios = files.map(file => new Audio(file));
 
         var AudioContext = window.AudioContext || window.webkitAudioContext;
-        this.ctx = new AudioContext();
-        this.merger = this.ctx.createChannelMerger(this.audios.length);
-        this.merger.connect(this.ctx.destination);
+        var ctx = new AudioContext();
+        this.merger = ctx.createChannelMerger(this.audios.length);
+        this.merger.connect(ctx.destination);
 
         for(var i = 0; i < this.audios.length; i++) {
             this.audios[i].crossOrigin = "anonymous";
         }
         this.gains = this.audios.map(audio => {
-            var gain = this.ctx.createGain();
-            var source = this.ctx.createMediaElementSource(audio);
+            var gain = ctx.createGain();
+            var source = ctx.createMediaElementSource(audio);
             source.connect(gain);
             gain.connect(this.merger);
             return gain;
@@ -45,9 +45,6 @@ class AudioMerger {
     }
 
     play() {
-        if (this.ctx.state !== 'running') {
-            this.ctx.resume();
-        }
         this.audios.forEach(audio => audio.play());
     }
 
