@@ -4,13 +4,16 @@ class AudioMerger {
         this.audios = files.map(file => new Audio(file));
 
         var AudioContext = window.AudioContext || window.webkitAudioContext;
-        var ctx = new AudioContext();
-        this.merger = ctx.createChannelMerger(this.audios.length);
-        this.merger.connect(ctx.destination);
+        this.ctx = new AudioContext();
+        this.merger = this.ctx.createChannelMerger(this.audios.length);
+        this.merger.connect(this.ctx.destination);
 
+        for(var i = 0; i < this.audios.length; i++) {
+            this.audios[i].crossOrigin = "anonymous";
+        }
         this.gains = this.audios.map(audio => {
-            var gain = ctx.createGain();
-            var source = ctx.createMediaElementSource(audio);
+            var gain = this.ctx.createGain();
+            var source = this.ctx.createMediaElementSource(audio);
             source.connect(gain);
             gain.connect(this.merger);
             return gain;
@@ -28,8 +31,12 @@ class AudioMerger {
             });
         });
         this.audios[0].addEventListener("ended", () => {
-            makeBtnGreen(document.getElementById('btn2'))
+            this.endedCallback()
         })
+    }
+
+    onEnded(callback) {
+        this.endedCallback = callback
     }
 
     onBuffered(callback) {
@@ -38,6 +45,9 @@ class AudioMerger {
     }
 
     play() {
+        if (this.ctx.state !== 'running') {
+            this.ctx.resume();
+        }
         this.audios.forEach(audio => audio.play());
     }
 
@@ -60,7 +70,7 @@ class AudioMerger {
     getDelay() {
         var times = [];
         for (var i = 0; i < this.audios.length; i++) {
-        times.push(this.audios[i].currentTime);
+            times.push(this.audios[i].currentTime);
         }
 
         var minTime = Math.min.apply(Math, times);

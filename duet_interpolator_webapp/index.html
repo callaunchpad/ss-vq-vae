@@ -6,6 +6,7 @@
         <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" crossorigin="anonymous"/>
         <title>Duet Interpolator Demo</title>
         <script src="AudioMerger.js"></script>
+        <script src="scripts.js"></script>
     </head>
     <body>
         <div class="jumbotron jumbotron-fluid">
@@ -18,172 +19,69 @@
         </div>
 
         <div class="container">
-            <h3 class="mt-0">Example #1</h3>
-            <div class="mb-2" id="controls-0" style="display:none">
-                <div class="row">
-                    <div class="col-2">
-                        <button class="btn btn-success p-2 btn-block" onclick="playButtonClicked(this)" id="btn1" linked-audio="file1-0"><i class="fas fa-play"></i> Content Audio</button>
-                    </div>
-                    <div class="col">
-                        <button class="btn btn-success p-2 btn-block" onClick="togglePlayback(this)" id="btn2" index="0"><i class="fas fa-play"></i> Interpolation</button>
-                    </div>
-                    <div class="col-2">
-                        <button class="btn btn-success p-2 btn-block" onclick="playButtonClicked(this)" id="btn3" linked-audio="file2-0"><i class="fas fa-play"></i> Style Audio</button>
-                    </div>
-                    
-                </div>
-                <audio id="file1-0" src="output/0.4.a.wav" onended="makeBtnGreen(document.getElementById('btn1'))"></audio>
-                <audio id="file2-0" src="output/0.4.b.wav" onended="makeBtnGreen(document.getElementById('btn3'))"></audio>
-            </div>
-            <div class="row">
-                <div class="col">0% Style</div>
-                <div class="col-xl-9" style="width:100%">
-                    <input type="range" min="0" max="100" value="10" class="slider" id="slider-0">
-                    <p>Content Audio with <span class="sliderValue"></span>% the style of Style Audio applied.</p>
-                </div>
-                <div class="col">100% Style</div>
-            </div>
-
-            <h3 class="mt-0">Example #2</h3>
-            <div class="mb-2" id="controls-1" style="display:none">
-                <div class="row">
-                    <div class="col-2">
-                        <button class="btn btn-success p-2 btn-block" onclick="playButtonClicked(this)" id="btn1" linked-audio="file1"><i class="fas fa-play"></i> Content Audio</button>
-                    </div>
-                    <div class="col">
-                        <button class="btn btn-success p-2 btn-block" onClick="togglePlayback(this)" id="btn2" index="1"><i class="fas fa-play"></i> Interpolation</button>
-                    </div>
-                    <div class="col-2">
-                        <button class="btn btn-success p-2 btn-block" onclick="playButtonClicked(this)" id="btn3" linked-audio="file2"><i class="fas fa-play"></i> Style Audio</button>
-                    </div>
-                    
-                </div>
-                <audio id="file1" src="output/0.4.a.wav" onended="makeBtnGreen(document.getElementById('btn1'))"></audio>
-                <audio id="file2" src="output/0.4.b.wav" onended="makeBtnGreen(document.getElementById('btn3'))"></audio>
-            </div>
-            <div class="row">
-                <div class="col">0% Style</div>
-                <div class="col-xl-9" style="width:100%">
-                    <input type="range" min="0" max="100" value="20" class="slider" id="slider-1">
-                    <p>Content Audio with <span class="sliderValue"></span>% the style of Style Audio applied.</p>
-                </div>
-                <div class="col">100% Style</div>
-            </div>
+            <main><!-- Populated by Javascript --></main>
 
             <footer class="pt-2 my-md-5 pt-md-2 border-top">
                 <p>Audio Merger is adopted from answer by Aloso <a href="https://stackoverflow.com/questions/10377237/how-to-start-multiple-audio-tags-simultaneously/53252521#53252521" target="_BLANK">here</a>.</p>
             </footer>
         </div>
+        <script id="template" type="text/plain">
+            <h3 class="mt-0">{0}</h3>
+            <div class="mb-2" id="controls-{1}" style="display:none">
+                <div class="row">
+                    <div class="col-2">
+                        <button class="btn btn-success p-2 btn-block btn-file" onclick="playButtonClicked(this)" id="btn1-{1}" linked-audio="file1-{1}"><i class="fas fa-play"></i> Content Audio</button>
+                    </div>
+                    <div class="col">
+                        <button class="btn btn-success p-2 btn-block btn-inter" onClick="togglePlayback(this)" id="btn2-{1}" index="{1}"><i class="fas fa-play"></i> Interpolation</button>
+                    </div>
+                    <div class="col-2">
+                        <button class="btn btn-success p-2 btn-block btn-file" onclick="playButtonClicked(this)" id="btn3-{1}" linked-audio="file2-{1}"><i class="fas fa-play"></i> Style Audio</button>
+                    </div>
+                    
+                </div>
+                <audio id="file1-{1}" src="{2}" onended="makeBtnGreen(document.getElementById('btn1-{1}'))"></audio>
+                <audio id="file2-{1}" src="{3}" onended="makeBtnGreen(document.getElementById('btn3-{1}'))"></audio>
+            </div>
+            <div class="row">
+                <div class="col">0% Style</div>
+                <div class="col-xl-9" style="width:100%">
+                    <input type="range" min="0" max="100" value="0" class="slider" id="slider-{1}">
+                    <p>Content Audio with <span class="sliderValue"></span>% the style of Style Audio applied.</p>
+                </div>
+                <div class="col">100% Style</div>
+            </div>
+        </script>
         <script>
+            const prefixes = ["output/0.2."/*,"output/0.4.", "output/0.3.", "output/0.1."*/]
+            const titles = ["Example #1"/*, "Example #2", "Example #3", "Example #4 (bad)"*/]
+            var audioMergers = []
             $(document).ready(function() {
+                prefixes.forEach(function(str, index) {
+                    // Populates main
+                    $('main').append($('#template').html().format(titles[index], index, str+'a.wav', str+'b.wav'))
+
+                    var aud_files = []
+                    for (var i = 0; i <= 10; i++) {
+                        aud_files.push(str + String(i) + ".wav")
+                    }
+                    var audioMerger = new AudioMerger(aud_files)
+                    audioMergers.push(audioMerger)
+                    audioMerger.onBuffered(() => showPlaybackBtns(index));
+                    audioMerger.onEnded(() => makeBtnGreen(document.getElementById('btn2-'+index)));
+                })
+
                 $('input.slider').each(function(index) {
                     var labelSpan = $(this).parent().find('span.sliderValue')
                     labelSpan.html($(this).val())
                     $(this).on('input', function() {
                         labelSpan.html($(this).val());
-                        playSlider(index, 100-$(this).val())
+                        adjustVolumes(index, 100-$(this).val())
                     })
                 })
             })
-            const prefixes = ["output/0.4.", "output/0.4."]
-            var audioMergers = []
-            prefixes.forEach(function(str, index) {
-                var aud_files = []
-                for (var i = 0; i <= 10; i++) {
-                    aud_files.push(str + String(i) + ".wav")
-                }
-                var audioMerger = new AudioMerger(aud_files)
-                audioMergers.push(audioMerger)
-                audioMerger.onBuffered(() => showPlaybackBtns(index));
-            })
-            
-            function playSlider(index, val) {
-                if (val == 100) {
-                    audioMergers[index].muteAll()
-                    audioMergers[index].setVolume(1, 10)
-                } else {
-                    firstFile = Math.floor(val / 10)
-                    volume = (val % 10) / 10
-                    secondFile = Math.floor(val / 10 + 1)
-                    
-                    for(var i = 0; i <= 10; i++) {
-                        if (i == firstFile || i == secondFile) continue
-                        audioMergers[index].setVolume(0, i);
-                    }
-                    audioMergers[index].setVolume(1 - volume, firstFile);
-                    audioMergers[index].setVolume(volume, secondFile);
-                }
-            }
-
-            function stopAllAudios() {
-                $('audio').each(function() {
-                    this.pause()
-                    this.currentTime = 0
-                })
-                
-                //makeBtnGreen(document.getElementById("btn1"))
-                //makeBtnGreen(document.getElementById("btn3"))
-            }
-
-            function startPlayback(index) {
-                stopAllAudios()
-                audioMergers[index].setTime(0)
-                playSlider(index, 100-$('#slider-'+index).val())
-                audioMergers[index].play()
-            }
-            function stopPlayback(index) {
-                audioMergers.forEach(function(audioMerger) {
-                    audioMerger.pause()
-                    makeBtnGreen(document.getElementById("btn2"))
-                })
-            }
-
-            function togglePlayback(btn) {
-                var index = parseInt(btn.getAttribute("index"))
-                if (audioMergers[index].isPaused()) {
-                    startPlayback(index)
-                    makeBtnRed(btn)
-                } else {
-                    stopPlayback(index)
-                    makeBtnGreen(btn)
-                }
-            }
-
-            function showPlaybackBtns(id) {
-                $('#controls-'+id).show();
-            }
-
-            function playButtonClicked(btn) {
-                var linkedAudioName = btn.getAttribute("linked-audio")
-                var audio = document.getElementById(linkedAudioName);
-                if (audio.paused) {
-                    stopAllAudios()
-                    stopPlayback()
-                    audio.play();
-                    makeBtnRed(btn)
-                } else {
-                    audio.pause();
-                    audio.currentTime = 0
-                    makeBtnGreen(btn)
-                }
-            }
-            function makeBtnRed(btn) {
-                btn.classList.add('btn-danger')
-                btn.classList.remove('btn-success')
-                btn.children[0].classList.add('fa-stop')
-                btn.children[0].classList.remove('fa-play')
-            }
-            function makeBtnGreen(btn) {
-                btn.classList.remove('btn-danger')
-                btn.classList.add('btn-success')
-                btn.children[0].classList.add('fa-play')
-                btn.children[0].classList.remove('fa-stop')
-            }
         </script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
         <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
-        <script>
-
-        </script>
     </body>
 </html>
