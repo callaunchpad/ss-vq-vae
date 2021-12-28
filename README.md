@@ -1,3 +1,37 @@
+Launchpad Duet Project
+-------------------------------------------------------
+Final presentation: https://docs.google.com/presentation/d/1ng_lo6JNzyAx-LCkmBjuxH59Z90M_YIStFC_8o80AWA/edit?usp=sharing
+
+Website: https://www.ocf.berkeley.edu/~jaychou/duet/
+
+GitHub Repo: (You are Here)
+
+## Structure of the Repo
+
+This repo is a fork of https://github.com/cifkao/ss-vq-vae.
+
+- The `docs` folder has our website code including Javascript code to interpolate between different audio files in realtime.
+- `experiments/duet_dataloader` has the dataloading code for the genre classifier project. (We also modified the ss-vq-vae itself to output styles, but I don't think that code is currently in the repository).
+- The gm-vae branch has the GM-VAE modifications (stochastic sampling).
+- The RNN code is in experiments/duet_dataloader and src/ss_vq_vae
+
+## How to use the repo
+
+We've added two new flags to the `python -m ss_vq_vae.models.vqvae_oneshot` command described in the original README below:
+- encode_content will output just the content (you need to pass in a path to a file that contains a list of lines, each line needs a path to a file to encode content of)
+  - The model path is currently hardcoded to "/datasets/duet/ssvqvae_model_state.pt" on line 307 of vqvae_oneshot.py -- you'll need to change it or run on CSUA
+- interpolate will output the 10 interpolation files for each audio file pair. It takes a path to pairs of files (each pair is tab separated I think, and then lines between pairs)
+  - interpolate also takes a --model flag with the model path
+
+For training, it's the same as the original.
+
+## Overview of the project and results
+
+See our [final presentation](https://docs.google.com/presentation/d/1ng_lo6JNzyAx-LCkmBjuxH59Z90M_YIStFC_8o80AWA/edit?usp=sharing)! 
+
+--------------------------------------------------------
+
+
 Self-Supervised VQ-VAE for One-Shot Music Style Transfer
 ========================================================
 
