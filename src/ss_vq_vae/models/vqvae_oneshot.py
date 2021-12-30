@@ -310,12 +310,17 @@ class Experiment:
             all_encodings = []
             input_device = None
             for ((input_c, _), ) in loader:
-                print(type(input_c))
                 encoded_c = self.model.encode_content(input_c.to(device=self.device), encode_content=True)
+                # print(encoded_c.shape)
                 all_encodings.append(encoded_c.cpu().numpy())
-        
-        all_encodings = np.concatenate(all_encodings)
-        np.savetxt(os.path.join(self.logdir, 'encoded_content.txt'), all_encodings, fmt="%d")
+
+        for i in tqdm(range(len(all_encodings))):   
+            e = all_encodings[i]
+            with open(os.path.join(self.logdir, 'encoded_content_full.txt'), "a") as f:
+                f.write("\n")
+                np.savetxt(f, e, fmt="%d")
+        # all_encodings = np.stack(all_encodings)
+        # np.savetxt(os.path.join(self.logdir, 'encoded_content.txt'), all_encodings, fmt="%d")
 
     def _validate(self, loader, tb_writer=None, step=None,
                   write_losses=True, write_samples=False, write_model=False):
